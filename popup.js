@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loader = document.querySelector('.loader');
   const endpointInput = document.getElementById('endpoint');
   const apiKeyInput = document.getElementById('apiKey');
+  const modelInput = document.getElementById('model');
   const summarizeButton = document.getElementById('summarize');
   const summaryDiv = document.getElementById('summary');
 
@@ -26,15 +27,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     loader.style.display = 'none';
   }
 
-  // Load saved settings
+  // Load saved settings (including model)
   try {
-    const result = await chrome.storage.local.get(['endpoint', 'apiKey']);
+    const result = await chrome.storage.local.get(['endpoint', 'apiKey', 'model']);
     console.log('Loaded settings:', {
       endpoint: result.endpoint ? '[SET]' : '[NOT SET]',
-      apiKey: result.apiKey ? '[SET]' : '[NOT SET]'
+      apiKey: result.apiKey ? '[SET]' : '[NOT SET]',
+      model: result.model ? '[SET]' : '[NOT SET]'
     });
     endpointInput.value = result.endpoint || '';
     apiKeyInput.value = result.apiKey || '';
+    modelInput.value = result.model || 'gpt-4o';
   } catch (error) {
     console.error('Error loading settings:', error);
   }
@@ -43,9 +46,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function saveSettings() {
     const endpoint = endpointInput.value;
     const apiKey = apiKeyInput.value;
+    const model = modelInput.value;
     
     try {
-      await chrome.storage.local.set({ endpoint, apiKey });
+      await chrome.storage.local.set({ endpoint, apiKey, model });
       console.log('Settings saved');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -53,9 +57,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Add input event listeners
+  // Add input event listeners for all settings fields
   endpointInput.addEventListener('input', saveSettings);
   apiKeyInput.addEventListener('input', saveSettings);
+  modelInput.addEventListener('input', saveSettings);
 
   /**
    * Fetches the YouTube transcript from the current tab by injecting a script
@@ -87,45 +92,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           // Helper function to get the transcript text if it's already visible
           function getTranscriptText() {
-			  const transcriptContainer = document.querySelector('ytd-transcript-segment-list-renderer');
-			  if (!transcriptContainer) {
-				return null;
-			  }
+            const transcriptContainer = document.querySelector('ytd-transcript-segment-list-renderer');
+            if (transcriptContainer) {
+              const segments = Array.from(
+                transcriptContainer.querySelectorAll('ytd-transcript-segment-renderer')
+              );
 
-			  // Each line is a <ytd-transcript-segment-renderer> element
-			  const segments = Array.from(
-				transcriptContainer.querySelectorAll('ytd-transcript-segment-renderer')
-			  );
-			  if (!segments.length) {
-				return null;
-			  }
+              const videoTitle = document.querySelector('h1.ytd-video-primary-info-renderer')
+                ?.textContent?.trim() || '';
+              console.log('Video title:', videoTitle);
 
-			  // Grab the video title
-			  const videoTitle = document.querySelector('h1.ytd-video-primary-info-renderer')
-				?.textContent?.trim() || '';
+              // Updated selectors based on current DOM
+              const transcriptText = segments.map(segment => {
+                const time = segment.querySelector('.segment-timestamp')?.textContent.trim();
+                const text = segment.querySelector('.segment-text')?.textContent.trim();
+                if (time && text) {
+                  return `[${time}] ${text}`;
+                }
+                return text;
+              }).filter(Boolean);
 
-			  // Build an array of "[time] text" lines
-			  const transcriptText = segments.map(segment => {
-				// The time appears in <span class="segment-timestamp">
-				const time = segment.querySelector('.segment-timestamp')?.textContent.trim();
-
-				// The spoken text appears in <span class="segment-text">
-				const text = segment.querySelector('.segment-text')?.textContent.trim();
-
-				// If you want timecodes, include them; otherwise, just return `text`.
-				if (time && text) {
-				  return `[${time}] ${text}`;
-				}
-				return text; // Or return null if you need both time and text
-			  }).filter(Boolean);
-
-			  if (transcriptText.length > 0) {
-				// Join lines with newlines
-				return `Title: ${videoTitle}\n\nTranscript:\n${transcriptText.join('\n')}`;
-			  }
-
-			  return null;
-			}
+              if (transcriptText.length > 0) {
+                return `Title: ${videoTitle}\n\nTranscript:\n${transcriptText.join('\n')}`;
+              }
+            }
+            return null;
+          }
 
           /**
            * Opens the “Meer”/“More actions” menu, then clicks the “Transcript tonen”/“Show transcript” button.
@@ -133,7 +125,6 @@ document.addEventListener('DOMContentLoaded', async () => {
            */
           function openTranscriptPanel() {
             return new Promise((resolvePanel, rejectPanel) => {
-              // Try either the Dutch or English aria-label
               const moreButton = document.querySelector(
                 'button[aria-label="Meer"], button[aria-label="More actions"]'
               );
@@ -141,16 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return rejectPanel(new Error("Could not find 'Meer' / 'More actions' button"));
               }
 
-              // Click the 'Meer' / 'More actions' button
               moreButton.click();
 
-              // Poll for the transcript button
               let attempts = 0;
               const checkInterval = setInterval(() => {
                 attempts++;
                 console.log('Checking for transcript button, attempt:', attempts);
-
-                // Look for Dutch or English aria-labels
                 const transcriptButton = document.querySelector(
                   'button[aria-label="Transcript tonen"], ' +
                   'button[aria-label="Show transcript"], ' +
@@ -171,17 +158,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
 
-          // 1) If the transcript is already visible, return immediately
+          // If transcript is already visible, return it immediately
           let text = getTranscriptText();
           if (text) {
             console.log('Found existing transcript');
             return resolve(text);
           }
 
-          // 2) Otherwise, open the transcript panel
+          // Otherwise, open the transcript panel
           openTranscriptPanel()
             .then(() => {
-              // Now poll for the actual transcript text
               let attempts = 0;
               const checkInterval = setInterval(() => {
                 attempts++;
@@ -194,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                   return resolve(text);
                 }
 
-                // Check for error messages
                 const errorElement = document.querySelector('.ytd-transcript-error-message');
                 if (errorElement) {
                   clearInterval(checkInterval);
@@ -228,8 +213,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const endpoint = endpointInput.value;
     const apiKey = apiKeyInput.value;
+    const model = modelInput.value;
     
-    if (!endpoint || !apiKey) {
+    if (!endpoint || !apiKey || !model) {
       showStatus('Please configure API settings first.', 'error');
       return;
     }
@@ -240,7 +226,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     showLoader();
 
     try {
-      // Get the active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) {
         throw new Error('No active tab found');
@@ -268,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: model,
           messages: [
             { 
               role: 'system', 
@@ -308,6 +293,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Log that initialization is complete
   console.log('Popup initialization complete');
 });
