@@ -1,0 +1,17 @@
+# YouTube Transcript Summarizer
+
+A browser extension that extracts YouTube video transcripts and generates concise summaries using a custom LLM API. This extension automatically opens the transcript panel (supporting both English and Dutch UIs) and scrapes the transcript text before sending it for summarization.
+
+## Features
+
+- **Automated Transcript Extraction:** Opens the transcript panel by clicking the "More actions" (or "Meer") button and then the "Show transcript" (or "Transcript tonen") button.
+- **Robust DOM Scraping:** Extracts transcript text using updated selectors based on YouTube’s current DOM structure.
+- **API Integration:** Sends the extracted transcript to a custom LLM API (e.g., GPT-3.5 Turbo) for generating concise video summaries.
+- **Multilingual Support:** Works with both English and Dutch YouTube interfaces.
+
+## Installation
+
+1. **Clone the Repository:**
+
+   ```bash
+   git clone https://github.com/yourusername/youtube-transcript-summarizer.git
