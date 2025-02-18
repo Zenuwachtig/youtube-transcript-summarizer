@@ -1,17 +1,38 @@
-# YouTube Transcript Summarizer
-
+YouTube Transcript Summarizer
 A browser extension that extracts YouTube video transcripts and generates concise summaries using a custom LLM API. This extension automatically opens the transcript panel (supporting both English and Dutch UIs) and scrapes the transcript text before sending it for summarization.
 
-## Features
+Features:
+Automated Transcript Extraction: Opens the transcript panel by clicking the "More actions" (or "Meer") button and then the "Show transcript" (or "Transcript tonen") button.
+Robust DOM Scraping: Extracts transcript text using updated selectors based on YouTube's current DOM structure.
+API Integration: Sends the extracted transcript to a custom LLM API (e.g., GPT) for generating concise video summaries.
+Multilingual Support: Works with both English and Dutch YouTube interfaces.
 
-- **Automated Transcript Extraction:** Opens the transcript panel by clicking the "More actions" (or "Meer") button and then the "Show transcript" (or "Transcript tonen") button.
-- **Robust DOM Scraping:** Extracts transcript text using updated selectors based on YouTube’s current DOM structure.
-- **API Integration:** Sends the extracted transcript to a custom LLM API (e.g., GPT-3.5 Turbo) for generating concise video summaries.
-- **Multilingual Support:** Works with both English and Dutch YouTube interfaces.
+Installation:
+Clone the Repository: git clone https://github.com/yourusername/youtube-transcript-summarizer.git
 
-## Installation
+Load the Extension in Chrome:
+Open Chrome and navigate to chrome://extensions/
+Enable Developer mode (toggle in the upper right)
+Click "Load unpacked" and select the repository folder
 
-1. **Clone the Repository:**
+Usage:
+Navigate to a YouTube video page.
+Click the extension icon to open the popup.
+Enter your LLM API endpoint and API key.
+Click the "Summarize Video" button.
 
-   ```bash
-   git clone https://github.com/yourusername/youtube-transcript-summarizer.git
+The extension will:
+Open the transcript panel
+Extract the transcript text
+Send the transcript to your LLM API for summarization
+The generated summary will be displayed in the popup.
+
+Customization:
+DOM Selectors: If YouTube updates its interface, you might need to tweak the selectors in popup.js for transcript extraction.
+API Configuration: The API request uses gpt-3.5-turbo as the model. Modify the API payload in popup.js as needed for your custom API.
+
+License:
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+Contributing:
+Contributions, issues, and feature requests are welcome! Please feel free to open an issue or submit a pull request.
